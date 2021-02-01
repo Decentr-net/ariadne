@@ -65,7 +65,7 @@ func TestFetcher_FetchBlocks(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	count := 0
 
-	for b := range f.FetchBlocks(1000, WithContext(ctx), WithErrHandler(testErrHandler(t, cancel))) {
+	for b := range f.FetchBlocks(ctx, 1000, WithErrHandler(testErrHandler(t, cancel))) {
 		require.NotZero(t, b.Height)
 		count++
 
@@ -109,8 +109,7 @@ func TestWithErrHandler(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	for range f.FetchBlocks(1000,
-		WithContext(ctx),
+	for range f.FetchBlocks(ctx, 1000,
 		WithErrHandler(func(height uint64, err error) {
 			require.EqualValues(t, 1000, height)
 			require.Error(t, err)

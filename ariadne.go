@@ -2,6 +2,7 @@
 package ariadne
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"reflect"
@@ -30,8 +31,12 @@ type Block struct {
 
 // Fetcher interface for fetching.
 type Fetcher interface {
-	FetchBlocks(from uint64, opts ...FetchBlocksOption) <-chan Block
-	FetchBlock(height uint64) (Block, error)
+	// FetchBlocks starts fetching routine and returns a channel for result.
+	// As FetchBlocks can't make multiple requests to node the channel doesn't have a buffer.
+	FetchBlocks(ctx context.Context, from uint64, opts ...FetchBlocksOption) <-chan Block
+	// FetchBlock fetches block from blockchain.
+	// If height is zero then the highest block will be requested.
+	FetchBlock(height uint64) (*Block, error)
 }
 
 type fetcher struct {
@@ -53,7 +58,7 @@ func New(node string, cdc *codec.Codec, timeout time.Duration) (Fetcher, error) 
 		return nil, err
 	}
 
-	return &fetcher{
+	return fetcher{
 		c: client,
 		d: types.DefaultTxDecoder(cdc),
 	}, nil
@@ -61,7 +66,7 @@ func New(node string, cdc *codec.Codec, timeout time.Duration) (Fetcher, error) 
 
 // FetchBlocks starts fetching routine and returns a channel for result.
 // As FetchBlocks can't make multiple requests to node the channel doesn't have a buffer.
-func (f fetcher) FetchBlocks(from uint64, opts ...FetchBlocksOption) <-chan Block {
+func (f fetcher) FetchBlocks(ctx context.Context, from uint64, opts ...FetchBlocksOption) <-chan Block {
 	cfg := defaultFetchBlockOptions
 	for _, v := range opts {
 		v(&cfg)
@@ -76,7 +81,7 @@ func (f fetcher) FetchBlocks(from uint64, opts ...FetchBlocksOption) <-chan Bloc
 	go func() {
 		for {
 			select {
-			case <-cfg.ctx.Done():
+			case <-ctx.Done():
 				close(ch)
 				return
 			default:
@@ -94,7 +99,7 @@ func (f fetcher) FetchBlocks(from uint64, opts ...FetchBlocksOption) <-chan Bloc
 				}
 
 				height++
-				ch <- b
+				ch <- *b
 			}
 		}
 	}()
@@ -104,7 +109,7 @@ func (f fetcher) FetchBlocks(from uint64, opts ...FetchBlocksOption) <-chan Bloc
 
 // FetchBlock fetches block from blockchain.
 // If height is zero then the highest block will be requested.
-func (f *fetcher) FetchBlock(height uint64) (Block, error) {
+func (f fetcher) FetchBlock(height uint64) (*Block, error) {
 	var h *int64
 	if height > 0 {
 		h = new(int64)
@@ -114,21 +119,21 @@ func (f *fetcher) FetchBlock(height uint64) (Block, error) {
 	res, err := f.c.Block(h)
 	if err != nil {
 		if strings.Contains(err.Error(), "must be less than or equal") {
-			return Block{}, ErrTooHighBlockRequested
+			return nil, ErrTooHighBlockRequested
 		}
-		return Block{}, err
+		return nil, err
 	}
 
 	txs := make([]sdk.Tx, len(res.Block.Txs))
 	for i, v := range res.Block.Txs {
 		tx, err := f.d(v)
 		if err != nil {
-			return Block{}, fmt.Errorf("failed to decode tx: %w", err)
+			return nil, fmt.Errorf("failed to decode tx: %w", err)
 		}
 		txs[i] = tx
 	}
 
-	return Block{
+	return &Block{
 		Height: uint64(res.Block.Height),
 		Txs:    txs,
 	}, nil

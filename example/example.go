@@ -30,11 +30,10 @@ func main() {
 	fmt.Printf("messages from block %d: \n%+v\n\n", b.Height, b.Messages())
 
 	fmt.Println("start fetching blocks")
-	for b := range fetcher.FetchBlocks(b.Height,
+	for b := range fetcher.FetchBlocks(context.Background(), b.Height,
 		ariadne.WithErrHandler(func(h uint64, err error) {
 			fmt.Printf("got an error on height %d: %s\n", h, err.Error())
 		}),
-		ariadne.WithContext(context.Background()),
 		ariadne.WithRetryInterval(time.Second*2),
 		ariadne.WithRetryLastBlockInterval(time.Second*5),
 	) {

@@ -17,11 +17,11 @@ f, err := ariadne.New(nodeAddr, cdc, time.Minute)
 if err != nil { panic(err) }
 
 for b := range f.FetchBlocks(b.Height) {
-    spew.Dump(b)
+    fmt.Sprintf("%+v\n", b)
 }
 ````
 
-You have to look at detailed example [there](example/example.go) 
+You have to look at detailed example [here](example/example.go) 
 
 ## Contributing
 

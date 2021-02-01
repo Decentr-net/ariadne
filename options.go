@@ -1,7 +1,6 @@
 package ariadne
 
 import (
-	"context"
 	"time"
 )
 
@@ -16,15 +15,12 @@ type FetchBlocksOptions struct {
 	retryInterval time.Duration
 	// errHandler will be called when fetcher will get an error.
 	errHandler func(height uint64, err error)
-	// ctx.Done() is listened by fetcher, feel free to use context for graceful shutdowns.
-	ctx context.Context
 }
 
 var defaultFetchBlockOptions = FetchBlocksOptions{
 	retryLastBlockInterval: time.Second,
 	retryInterval:          time.Second,
 	errHandler:             func(height uint64, err error) {},
-	ctx:                    context.Background(),
 }
 
 // WithRetryLastBlockInterval sets how long should fetcher wait if fetcher got ErrTooHighBlockRequested.
@@ -45,12 +41,5 @@ func WithRetryInterval(d time.Duration) FetchBlocksOption {
 func WithErrHandler(f func(height uint64, err error)) FetchBlocksOption {
 	return func(opts *FetchBlocksOptions) {
 		opts.errHandler = f
-	}
-}
-
-// WithContext sets context for fetcher.
-func WithContext(ctx context.Context) FetchBlocksOption {
-	return func(opts *FetchBlocksOptions) {
-		opts.ctx = ctx
 	}
 }
