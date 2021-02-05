@@ -3,10 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"reflect"
 	"time"
-
-	"github.com/Decentr-net/decentr/x/pdv"
 
 	"github.com/Decentr-net/ariadne"
 
@@ -37,9 +34,9 @@ func main() {
 		ariadne.WithRetryInterval(time.Second*2),
 		ariadne.WithRetryLastBlockInterval(time.Second*5),
 	) {
-		fmt.Printf("got new block %d. there are %d MsgCreatePDV objects\n",
+		fmt.Printf("got new block %d. there are %d messages\n",
 			b.Height,
-			len(ariadne.FilterMessages(b.Messages(), reflect.TypeOf(pdv.MsgCreatePDV{}))),
+			len(b.Messages()),
 		)
 	}
 }
