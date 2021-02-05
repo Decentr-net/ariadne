@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 	"strings"
 	"time"
 
@@ -24,6 +23,7 @@ var ErrTooHighBlockRequested = errors.New("too high block requested")
 // If you need have more information open new issue on github or DIY and send pull request.
 type Block struct {
 	Height uint64
+	Time   time.Time
 	Txs    []sdk.Tx
 }
 
@@ -135,6 +135,7 @@ func (f fetcher) FetchBlock(height uint64) (*Block, error) {
 
 	return &Block{
 		Height: uint64(res.Block.Height),
+		Time:   res.Block.Time,
 		Txs:    txs,
 	}, nil
 }
@@ -147,23 +148,4 @@ func (b Block) Messages() []sdk.Msg {
 	}
 
 	return msgs
-}
-
-// FilterMessages returns filtered slice with messages defined in types slices
-// If types slice is empty no one message will be returned.
-func FilterMessages(msgs []sdk.Msg, types ...reflect.Type) []sdk.Msg {
-	out := make([]sdk.Msg, 0, len(msgs))
-
-	for _, msg := range msgs {
-		msgT := reflect.TypeOf(msg)
-
-		for _, t := range types {
-			if msgT == t {
-				out = append(out, msg)
-				break
-			}
-		}
-	}
-
-	return out
 }

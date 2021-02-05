@@ -2,16 +2,13 @@ package ariadne
 
 import (
 	"context"
-	"reflect"
 	"testing"
 	"time"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/Decentr-net/decentr/app"
-	"github.com/Decentr-net/decentr/x/community"
 	"github.com/Decentr-net/decentr/x/pdv"
 )
 
@@ -33,6 +30,7 @@ func TestFetcher_FetchBlock(t *testing.T) {
 	b, err := f.FetchBlock(1000)
 	require.NoError(t, err)
 	require.EqualValues(t, 1000, b.Height)
+	require.False(t, b.Time.IsZero())
 	require.Len(t, b.Txs, 1)
 	require.Len(t, b.Txs[0].GetMsgs(), 1)
 
@@ -53,6 +51,7 @@ func TestFetcher_FetchBlock_Last(t *testing.T) {
 	b, err := f.FetchBlock(0)
 	require.NoError(t, err)
 	require.NotZero(t, b.Height)
+	require.False(t, b.Time.IsZero())
 	require.NotNil(t, b.Txs)
 }
 
@@ -67,6 +66,7 @@ func TestFetcher_FetchBlocks(t *testing.T) {
 
 	for b := range f.FetchBlocks(ctx, 1000, WithErrHandler(testErrHandler(t, cancel))) {
 		require.NotZero(t, b.Height)
+		require.False(t, b.Time.IsZero())
 		count++
 
 		if count == 2 {
@@ -86,21 +86,6 @@ func TestBlock_Messages(t *testing.T) {
 
 	require.Len(t, b.Messages(), 8)
 }
-
-func TestFilterMessages(t *testing.T) {
-	t.Parallel()
-
-	msgs := []sdk.Msg{
-		pdv.MsgCreatePDV{},
-		community.MsgSetLike{},
-		community.MsgCreatePost{},
-		pdv.MsgCreatePDV{},
-	}
-
-	require.Len(t, FilterMessages(msgs, reflect.TypeOf(pdv.MsgCreatePDV{})), 2)
-	require.Len(t, FilterMessages(msgs, reflect.TypeOf(community.MsgSetLike{})), 1)
-}
-
 func TestWithErrHandler(t *testing.T) {
 	t.Parallel()
 
