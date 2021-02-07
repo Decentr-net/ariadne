@@ -27,16 +27,17 @@ func main() {
 	fmt.Printf("messages from block %d: \n%+v\n\n", b.Height, b.Messages())
 
 	fmt.Println("start fetching blocks")
-	for b := range fetcher.FetchBlocks(context.Background(), b.Height,
+	fmt.Println(fetcher.FetchBlocks(context.Background(), b.Height, func(b ariadne.Block) error {
+		fmt.Printf("got new block %d. there are %d messages\n",
+			b.Height,
+			len(b.Messages()),
+		)
+		return nil
+	},
 		ariadne.WithErrHandler(func(h uint64, err error) {
 			fmt.Printf("got an error on height %d: %s\n", h, err.Error())
 		}),
 		ariadne.WithRetryInterval(time.Second*2),
 		ariadne.WithRetryLastBlockInterval(time.Second*5),
-	) {
-		fmt.Printf("got new block %d. there are %d messages\n",
-			b.Height,
-			len(b.Messages()),
-		)
-	}
+	).Error())
 }

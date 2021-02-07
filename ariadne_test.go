@@ -2,6 +2,7 @@ package ariadne
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -27,9 +28,9 @@ func TestFetcher_FetchBlock(t *testing.T) {
 	f, err := New(nodeAddr, app.MakeCodec(), time.Second)
 	require.NoError(t, err)
 
-	b, err := f.FetchBlock(1000)
+	b, err := f.FetchBlock(1236)
 	require.NoError(t, err)
-	require.EqualValues(t, 1000, b.Height)
+	require.EqualValues(t, 1236, b.Height)
 	require.False(t, b.Time.IsZero())
 	require.Len(t, b.Txs, 1)
 	require.Len(t, b.Txs[0].GetMsgs(), 1)
@@ -39,7 +40,7 @@ func TestFetcher_FetchBlock(t *testing.T) {
 	msg, ok := b.Txs[0].GetMsgs()[0].(pdv.MsgCreatePDV)
 	require.True(t, ok)
 
-	require.EqualValues(t, 1610732375, msg.Timestamp)
+	require.EqualValues(t, 1612551921, msg.ID)
 }
 
 func TestFetcher_FetchBlock_Last(t *testing.T) {
@@ -62,17 +63,88 @@ func TestFetcher_FetchBlocks(t *testing.T) {
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	count := 0
 
-	for b := range f.FetchBlocks(ctx, 1000, WithErrHandler(testErrHandler(t, cancel))) {
+	err = f.FetchBlocks(ctx, 1000, func(b Block) error {
 		require.NotZero(t, b.Height)
 		require.False(t, b.Time.IsZero())
-		count++
 
-		if count == 2 {
-			cancel() // finish test
+		if b.Height == 1002 {
+			cancel()
 		}
-	}
+
+		return nil
+	}, WithErrHandler(testErrHandler(t, cancel)))
+
+	require.Equal(t, context.Canceled, err)
+}
+
+func TestFetcher_FetchBlocks_Retrying(t *testing.T) {
+	t.Parallel()
+
+	f, err := New(nodeAddr, app.MakeCodec(), time.Second)
+	require.NoError(t, err)
+
+	count := 0
+	var errTest = errors.New("test")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	err = f.FetchBlocks(ctx, 1000, func(b Block) error {
+		// we shouldn't fetch block again
+		fi, _ := f.(fetcher)
+		fi.c = nil
+
+		require.NotZero(t, b.Height)
+		require.False(t, b.Time.IsZero())
+
+		if count == 3 {
+			cancel()
+		}
+
+		count++
+		return errTest
+	},
+		WithRetryInterval(time.Nanosecond),
+		WithErrHandler(func(_ uint64, err error) {
+			require.Equal(t, errTest, err)
+		}),
+	)
+
+	require.Equal(t, context.Canceled, err)
+}
+
+func TestFetcher_FetchBlocks_SkipFailed(t *testing.T) {
+	t.Parallel()
+
+	f, err := New(nodeAddr, app.MakeCodec(), time.Second)
+	require.NoError(t, err)
+
+	var h uint64
+
+	var errTest = errors.New("test")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	err = f.FetchBlocks(ctx, 1000, func(b Block) error {
+		require.NotZero(t, b.Height)
+		require.False(t, b.Time.IsZero())
+
+		require.NotEqual(t, h, b.Height)
+
+		if b.Height == 1001 {
+			cancel()
+		}
+
+		h = b.Height
+
+		return errTest
+	},
+		WithSkipError(true),
+		WithRetryInterval(time.Nanosecond),
+		WithErrHandler(func(_ uint64, err error) {
+			require.Equal(t, errTest, err)
+		}),
+	)
+
+	require.Equal(t, context.Canceled, err)
 }
 
 func TestBlock_Messages(t *testing.T) {
@@ -81,11 +153,12 @@ func TestBlock_Messages(t *testing.T) {
 	f, err := New(nodeAddr, app.MakeCodec(), time.Second)
 	require.NoError(t, err)
 
-	b, err := f.FetchBlock(100000)
+	b, err := f.FetchBlock(1236)
 	require.NoError(t, err)
 
-	require.Len(t, b.Messages(), 8)
+	require.Len(t, b.Messages(), 1)
 }
+
 func TestWithErrHandler(t *testing.T) {
 	t.Parallel()
 
@@ -94,12 +167,12 @@ func TestWithErrHandler(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	for range f.FetchBlocks(ctx, 1000,
+	require.Equal(t, context.Canceled, f.FetchBlocks(ctx, 1000,
+		func(b Block) error { return nil },
 		WithErrHandler(func(height uint64, err error) {
 			require.EqualValues(t, 1000, height)
 			require.Error(t, err)
 			cancel()
 		}),
-	) {
-	}
+	))
 }
