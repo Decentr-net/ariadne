@@ -35,21 +35,21 @@ func (m *MockFetcher) EXPECT() *MockFetcherMockRecorder {
 }
 
 // FetchBlocks mocks base method
-func (m *MockFetcher) FetchBlocks(ctx context.Context, from uint64, opts ...ariadne.FetchBlocksOption) <-chan ariadne.Block {
+func (m *MockFetcher) FetchBlocks(ctx context.Context, from uint64, handleFunc func(ariadne.Block) error, opts ...ariadne.FetchBlocksOption) error {
 	m.ctrl.T.Helper()
-	varargs := []interface{}{ctx, from}
+	varargs := []interface{}{ctx, from, handleFunc}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "FetchBlocks", varargs...)
-	ret0, _ := ret[0].(<-chan ariadne.Block)
+	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // FetchBlocks indicates an expected call of FetchBlocks
-func (mr *MockFetcherMockRecorder) FetchBlocks(ctx, from interface{}, opts ...interface{}) *gomock.Call {
+func (mr *MockFetcherMockRecorder) FetchBlocks(ctx, from, handleFunc interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]interface{}{ctx, from}, opts...)
+	varargs := append([]interface{}{ctx, from, handleFunc}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FetchBlocks", reflect.TypeOf((*MockFetcher)(nil).FetchBlocks), varargs...)
 }
 
