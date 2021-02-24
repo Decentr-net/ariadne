@@ -28,19 +28,19 @@ func TestFetcher_FetchBlock(t *testing.T) {
 	f, err := New(nodeAddr, app.MakeCodec(), time.Second)
 	require.NoError(t, err)
 
-	b, err := f.FetchBlock(1236)
+	b, err := f.FetchBlock(3009)
 	require.NoError(t, err)
-	require.EqualValues(t, 1236, b.Height)
+	require.EqualValues(t, 3009, b.Height)
 	require.False(t, b.Time.IsZero())
 	require.Len(t, b.Txs, 1)
 	require.Len(t, b.Txs[0].GetMsgs(), 1)
 
 	require.Equal(t, "pdv", b.Txs[0].GetMsgs()[0].Route())
-	require.Equal(t, "create_pdv", b.Txs[0].GetMsgs()[0].Type())
-	msg, ok := b.Txs[0].GetMsgs()[0].(pdv.MsgCreatePDV)
+	require.Equal(t, "distribute_rewards", b.Txs[0].GetMsgs()[0].Type())
+	msg, ok := b.Txs[0].GetMsgs()[0].(pdv.MsgDistributeRewards)
 	require.True(t, ok)
 
-	require.EqualValues(t, 1612551921, msg.ID)
+	require.EqualValues(t, uint64(0x60329c38), msg.Rewards[0].ID)
 }
 
 func TestFetcher_FetchBlock_Last(t *testing.T) {
@@ -153,7 +153,7 @@ func TestBlock_Messages(t *testing.T) {
 	f, err := New(nodeAddr, app.MakeCodec(), time.Second)
 	require.NoError(t, err)
 
-	b, err := f.FetchBlock(1236)
+	b, err := f.FetchBlock(3009)
 	require.NoError(t, err)
 
 	require.Len(t, b.Messages(), 1)
