@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Decentr-net/decentr/app"
-	"github.com/Decentr-net/decentr/x/pdv"
+	"github.com/Decentr-net/decentr/x/operations"
 )
 
 const nodeAddr = "http://zeus.testnet.decentr.xyz:26657"
@@ -37,7 +37,7 @@ func TestFetcher_FetchBlock(t *testing.T) {
 
 	require.Equal(t, "pdv", b.Txs[0].GetMsgs()[0].Route())
 	require.Equal(t, "distribute_rewards", b.Txs[0].GetMsgs()[0].Type())
-	msg, ok := b.Txs[0].GetMsgs()[0].(pdv.MsgDistributeRewards)
+	msg, ok := b.Txs[0].GetMsgs()[0].(operations.MsgDistributeRewards)
 	require.True(t, ok)
 
 	require.EqualValues(t, uint64(0x60329c38), msg.Rewards[0].ID)

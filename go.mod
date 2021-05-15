@@ -3,7 +3,7 @@ module github.com/Decentr-net/ariadne
 go 1.15
 
 require (
-	github.com/Decentr-net/decentr v1.1.0
+	github.com/Decentr-net/decentr v1.3.0
 	github.com/cosmos/cosmos-sdk v0.39.2
 	github.com/golang/mock v1.4.3
 	github.com/onsi/ginkgo v1.10.3 // indirect
