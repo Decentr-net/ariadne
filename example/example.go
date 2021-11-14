@@ -6,20 +6,17 @@ import (
 	"time"
 
 	"github.com/Decentr-net/ariadne"
-
-	decentr "github.com/Decentr-net/decentr/app"
 )
 
 func main() {
-	nodeAddr := "http://zeus.testnet.decentr.xyz:26657"
-	cdc := decentr.MakeCodec()
+	nodeAddr := "zeus.testnet.decentr.xyz:9090"
 
-	fetcher, err := ariadne.New(nodeAddr, cdc, time.Minute)
+	fetcher, err := ariadne.New(context.Background(), nodeAddr, time.Minute)
 	if err != nil {
 		panic(err)
 	}
 
-	b, err := fetcher.FetchBlock(0) // Fetch one block(the highest block)
+	b, err := fetcher.FetchBlock(context.Background(), 0) // Fetch one block(the highest block)
 	if err != nil {
 		panic(err)
 	}

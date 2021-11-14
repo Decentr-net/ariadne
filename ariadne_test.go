@@ -1,3 +1,5 @@
+//+build not_ready
+
 package ariadne
 
 import (
@@ -9,11 +11,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Decentr-net/decentr/app"
-	"github.com/Decentr-net/decentr/x/operations"
+	operationstypes "github.com/Decentr-net/decentr/x/operations/types"
 )
 
-const nodeAddr = "http://zeus.testnet.decentr.xyz:26657"
+const nodeAddr = "zeus.testnet.decentr.xyz:9090"
 
 var testErrHandler = func(t *testing.T, cancel func()) func(uint64, error) {
 	return func(_ uint64, err error) {
@@ -25,31 +26,29 @@ var testErrHandler = func(t *testing.T, cancel func()) func(uint64, error) {
 func TestFetcher_FetchBlock(t *testing.T) {
 	t.Parallel()
 
-	f, err := New(nodeAddr, app.MakeCodec(), time.Second)
+	f, err := New(context.Background(), nodeAddr, time.Second)
 	require.NoError(t, err)
 
-	b, err := f.FetchBlock(3009)
+	b, err := f.FetchBlock(context.Background(), 3009)
 	require.NoError(t, err)
 	require.EqualValues(t, 3009, b.Height)
 	require.False(t, b.Time.IsZero())
 	require.Len(t, b.Txs, 1)
 	require.Len(t, b.Txs[0].GetMsgs(), 1)
 
-	require.Equal(t, "pdv", b.Txs[0].GetMsgs()[0].Route())
-	require.Equal(t, "distribute_rewards", b.Txs[0].GetMsgs()[0].Type())
-	msg, ok := b.Txs[0].GetMsgs()[0].(operations.MsgDistributeRewards)
+	msg, ok := b.Txs[0].GetMsgs()[0].(*operationstypes.MsgDistributeRewards)
 	require.True(t, ok)
 
-	require.EqualValues(t, uint64(0x60329c38), msg.Rewards[0].ID)
+	require.EqualValues(t, uint64(0x60329c38), msg.Rewards[0].Reward.Dec.TruncateInt64())
 }
 
 func TestFetcher_FetchBlock_Last(t *testing.T) {
 	t.Parallel()
 
-	f, err := New(nodeAddr, app.MakeCodec(), time.Second)
+	f, err := New(context.Background(), nodeAddr, time.Second)
 	require.NoError(t, err)
 
-	b, err := f.FetchBlock(0)
+	b, err := f.FetchBlock(context.Background(), 0)
 	require.NoError(t, err)
 	require.NotZero(t, b.Height)
 	require.False(t, b.Time.IsZero())
@@ -59,7 +58,7 @@ func TestFetcher_FetchBlock_Last(t *testing.T) {
 func TestFetcher_FetchBlocks(t *testing.T) {
 	t.Parallel()
 
-	f, err := New(nodeAddr, app.MakeCodec(), time.Second)
+	f, err := New(context.Background(), nodeAddr, time.Second)
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -81,7 +80,7 @@ func TestFetcher_FetchBlocks(t *testing.T) {
 func TestFetcher_FetchBlocks_Retrying(t *testing.T) {
 	t.Parallel()
 
-	f, err := New(nodeAddr, app.MakeCodec(), time.Second)
+	f, err := New(context.Background(), nodeAddr, time.Second)
 	require.NoError(t, err)
 
 	count := 0
@@ -115,7 +114,7 @@ func TestFetcher_FetchBlocks_Retrying(t *testing.T) {
 func TestFetcher_FetchBlocks_SkipFailed(t *testing.T) {
 	t.Parallel()
 
-	f, err := New(nodeAddr, app.MakeCodec(), time.Second)
+	f, err := New(context.Background(), nodeAddr, time.Second)
 	require.NoError(t, err)
 
 	var h uint64
@@ -150,10 +149,10 @@ func TestFetcher_FetchBlocks_SkipFailed(t *testing.T) {
 func TestBlock_Messages(t *testing.T) {
 	t.Parallel()
 
-	f, err := New(nodeAddr, app.MakeCodec(), time.Second)
+	f, err := New(context.Background(), nodeAddr, time.Second)
 	require.NoError(t, err)
 
-	b, err := f.FetchBlock(3009)
+	b, err := f.FetchBlock(context.Background(), 3009)
 	require.NoError(t, err)
 
 	require.Len(t, b.Messages(), 1)
@@ -162,7 +161,7 @@ func TestBlock_Messages(t *testing.T) {
 func TestWithErrHandler(t *testing.T) {
 	t.Parallel()
 
-	f, err := New("wrong", app.MakeCodec(), time.Second)
+	f, err := New(context.Background(), "wrong", time.Second)
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
